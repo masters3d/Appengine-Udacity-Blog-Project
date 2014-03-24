@@ -1,0 +1,37 @@
+<html>
+<head>
+	<link type ="text/css" rel="stylesheet" href="/static/main.css" />
+	
+	<title> CS 253 Blog</title>
+</head>
+
+<body>
+
+	<a href="/blog" class="main-title"
+		>CS 253 Blog
+	</a>
+	<div>
+	<a href="/blog/newpost" >
+		Add New Post
+	</a>
+	</div>
+	<br>
+	<div>
+	<a href="/blog/login" >
+		Login
+	</a>
+	</div>
+    <br>
+    	<div>
+	<a href="/blog/signup" >
+		Signup as New user
+	</a>
+	</div>
+	<br>
+	<div id="content">
+	{% block content %}
+	{% endblock %}
+	</div>
+</body>
+
+</html>
