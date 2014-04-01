@@ -3,8 +3,10 @@ import re
 import webapp2
 import jinja2
 from google.appengine.ext import db
+from google.appengine.api import memcache
 import bcrypt
 import json
+from datetime import datetime, timedelta
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), autoescape=True)
@@ -58,8 +60,28 @@ class ArtPage(Handler):
     
 ## Blog Stuff
 
+
+
 def blog_key(name ='default'):
   return db.Key.from_path('blogs', name)
+
+ 
+
+def age_set(key, val):
+    save_time=datetime.utcnow()
+    memcache.set(key,(val,save_time))
+
+  
+def age_get(key):
+  record=memcache.get(key)
+  if record:
+    val,save_time = record
+    age =(datetime.utcnow()-save_time).total_seconds()
+  else:
+    val, age=None,0  
+  return val, age
+    
+
   
 class Post(db.Model,Handler):
   subject = db.StringProperty(required =True)
@@ -71,15 +93,25 @@ class Post(db.Model,Handler):
     self._render_text = self.content.replace('\n','<br>')
     return self.render_str("blog/post.html",p = self)
 
-    
-    
-    
+def update_cache_frontpage():
+  posts = greetings = Post.all().order('-created').fetch(limit = 10)
+  age_set("blogfrontpage", posts)
+  
     
 
 class BlogFront(Handler):
   def get(self):
-    posts = greetings = Post.all().order('-created')
-    self.render("blog/front.html",posts=posts)
+    retrived=0
+    #print "this is the blog key  "+str(blog_key())
+    cache=age_get("blogfrontpage")
+    
+    if cache[1]!=0:
+      posts=age_get("blogfrontpage")[0]
+    else:
+      update_cache_frontpage()
+    
+    retrived=int(age_get("blogfrontpage")[1])
+    self.render("blog/front.html",posts=posts,retrived=retrived)
 
 class BlogFrontJson(Handler):
   def get(self):
@@ -102,6 +134,7 @@ class PostPage(Handler):
     post = db.get(key)
           
     if post != None:
+      update_cache_frontpage()
       self.render('blog/permalink.html', post = post)
       return
     self.error(404)
