@@ -6,6 +6,7 @@ from google.appengine.ext import db
 from google.appengine.api import memcache
 import bcrypt
 import json
+import time
 from datetime import datetime, timedelta
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
@@ -76,7 +77,12 @@ def age_get(key):
   record=memcache.get(key)
   if record:
     val,save_time = record
+
     age =(datetime.utcnow()-save_time).total_seconds()
+    #print key
+    #print datetime.utcnow()
+    #print save_time
+    #print age
   else:
     val, age=None,0  
   return val, age
@@ -97,7 +103,10 @@ def update_cache_frontpage():
   posts = greetings = Post.all().order('-created').fetch(limit = 10)
   age_set("blogfrontpage", posts)
   
-    
+class Memcache_flush(Handler):
+  def get(self):
+    memcache.flush_all()
+    self.redirect("/")
 
 class BlogFront(Handler):
   def get(self):
@@ -109,6 +118,7 @@ class BlogFront(Handler):
       posts=age_get("blogfrontpage")[0]
     else:
       update_cache_frontpage()
+      posts=age_get("blogfrontpage")[0]
     
     retrived=int(age_get("blogfrontpage")[1])
     self.render("blog/front.html",posts=posts,retrived=retrived)
@@ -130,14 +140,28 @@ class PostPage(Handler):
     ##post_id=str(self.request.url)[-16:]
     #self.write(post_id)
     #post_id=4642138092470272
+    
     key = db.Key.from_path('Post', int(post_id), parent = blog_key())
-    post = db.get(key)
-          
-    if post != None:
+    #print "this is the the str(key):::::::"+str(key)
+    post_id_key=str(post_id)
+    cache=age_get(post_id_key)
+    
+    if cache[1]!=0:
+      post=age_get(post_id_key)[0]
+    if cache[1]==0:
+      post = db.get(key)
+      age_set(post_id_key, post)
+      post = age_get(post_id_key)[0]
       update_cache_frontpage()
-      self.render('blog/permalink.html', post = post)
+    elif post==None:
+      self.error(405)
       return
-    self.error(404)
+      
+    retrived=int(age_get(post_id_key)[1])
+    self.render('blog/permalink.html', post = post,retrived=retrived)
+      
+
+   
 
 
 def jsonrespond(post):
@@ -369,6 +393,8 @@ app = webapp2.WSGIApplication([('/art', ArtPage),
                                ('/blog/signup',SignupPage),
                                ('/blog/login',LoginPage),
                                ('/blog/logout',LogoutPage),
+                               ('/blog/flush',Memcache_flush),
+                              
                                ('/',MainPage),
                               
                               
