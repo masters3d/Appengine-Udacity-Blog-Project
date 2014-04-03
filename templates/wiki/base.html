@@ -1,0 +1,39 @@
+<html>
+<head>
+	<link type ="text/css" rel="stylesheet" href="/static/main.css" />
+	
+	<title> WIKI</title>
+</head>
+
+<body>
+
+	<a href="/wiki" class="main-title"
+		>WIKI
+	</a>
+	<a href="/wiki/logout" class="wiki-links" >
+		Log out
+	</a>
+	<a href="/wiki/login" class="wiki-links" >
+		Login
+	</a>
+	<a href="/wiki/signup" class="wiki-links" >
+		Signup
+	</a>
+	<a href="/wiki/_edit/" class="wiki-links" >
+		Edit
+	</a>
+		<a href="/wiki/_history/" class="wiki-links" >
+		History
+	</a>
+	<br>
+	<br>
+	<b> {{user_headsup | safe}} </b>
+	<br>
+	<br>
+	<div id="content">
+	{% block content %}
+	{% endblock %}
+	</div>
+</body>
+<p class="post-date">Queried {{ retrived | safe }} seconds ago</p>
+</html>

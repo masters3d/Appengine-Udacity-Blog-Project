@@ -1,0 +1,14 @@
+{% extends  "wiki/base.html" %}
+
+{% block content %}
+	
+<form method="post">
+
+    <label>
+        <div>{{wikititle | safe}}</div><textarea name="wikientry"> {{wikientry}} </textarea>
+    </label>
+    <div class="error"> {{error}}</div>
+    <input type="submit"' value="Save">
+</form>
+	
+{% endblock %}

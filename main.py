@@ -154,7 +154,7 @@ class PostPage(Handler):
       post = age_get(post_id_key)[0]
       update_cache_frontpage()
     elif post==None:
-      self.error(405)
+      self.error(404)
       return
       
     retrived=int(age_get(post_id_key)[1])
@@ -221,8 +221,19 @@ def validate_input(text,kind):# "username","password","email"
 
 
 class SignupPage(Handler):
+  
+    def errortorender(self, *a, **kw):
+        self.render("blog/signup.html", **kw)
+        print "\r<<<00>>>    ERRORTORENDER was calleed successfully\r!!"
+        
+    def signupredirect(self, *a, **kw):
+        self.redirect('welcome')
+        print "\r!!!!!!!!    SIGNUPREDIRECT was calleed successfully!!\r!!"
+
+        
     def get(self):
         self.render("blog/signup.html")
+
     
 
     def post(self):
@@ -278,7 +289,7 @@ class SignupPage(Handler):
 
 
         if have_error:
-            self.render("blog/signup.html", **params)
+            self.errortorender(**params)
 
         else:
             salt=bcrypt.gensalt(2)
@@ -291,7 +302,8 @@ class SignupPage(Handler):
             cookieruserid_hashed=bcrypt.hashpw(cookieuserid,u.usersalt)
             cookietemp=str('name='+cookieuserid+'|'+cookieruserid_hashed)
             self.response.headers.add_header('Set-Cookie',cookietemp+";Path=/")
-            self.redirect('welcome')
+            self.signupredirect()
+
 
 
             
@@ -305,9 +317,19 @@ class UserData(db.Model,Handler):
   created = db.DateTimeProperty(auto_now_add = True)
   last_modified = db.DateTimeProperty(auto_now = True)
   
+
+
   
 class LoginPage(Handler):
   
+    def errortorender(self, *a, **kw):
+        self.render("blog/login.html", **kw)
+        print "\r<<<00>>>    ERRORTORENDER was calleed successfully\r!!"
+        
+    def loginredirect(self, *a, **kw):
+        self.redirect('welcome')
+        print "\r!!!!!!!!    SIGNUPREDIRECT was calleed successfully!!\r!!"
+    
     def get(self):
             self.render("blog/login.html")
 
@@ -342,22 +364,43 @@ class LoginPage(Handler):
 
         
       if have_error:
-          self.render("blog/login.html", **params)
+          self.errortorender(**params)
+          #self.render("blog/login.html", **params)
       
       else:
           cookieruserid_hashed=bcrypt.hashpw(str(userid),u.usersalt)
           cookietemp=str('name='+str(userid)+'|'+cookieruserid_hashed)
           self.response.headers.add_header('Set-Cookie',cookietemp+";Path=/")
-          self.redirect('welcome')
-         
+          #self.redirect('welcome')
+          self.loginredirect()
+
+class WikiLogin(LoginPage):
+  
+    def errortorender(self, *a, **kw):
+        self.render("wiki/login.html", **kw)
+        print "\r<<<00>>>    ERRORTORENDER was calleed successfully\r!!"
+        
+    def loginredirect(self, *a, **kw):
+        self.redirect('/')
+        print "\r!!!!!!!!    SIGNUPREDIRECT was calleed successfully!!\r!!"
+    def get(self):
+        self.render("wiki/login.html")
+
+          
 class LogoutPage(Handler):
   
     def get(self):
       self.response.headers.add_header('Set-Cookie','name=;Path=/')
+      #params = dict(user_headsup="You have been logged out")
       self.redirect('signup')
 
 
+     
+
 class WelcomePage(Handler):
+    def renderwelcomepage(self, *a, **kw):
+        self.render('blog/welcome.html',**kw)
+  
     def get(self):
         #self.response.headers['Content-Type'] ='text/plain'
         cookieusernid  = (self.request.cookies.get('name')).split('|')[0]
@@ -376,12 +419,73 @@ class WelcomePage(Handler):
         #print "this is the username= "+ str(u.username)
         
         if userid_valid:
-          self.render('blog/welcome.html', username = u.username)
+          #self.render('blog/welcome.html', username = u.username)
+          self.renderwelcomepage(username = u.username)
     
         else: #Need to add cookies intead to this
           self.redirect('signup')
 
-     
+class WikiWelcomePage(WelcomePage):
+    def renderwelcomepage(self, *a, **kw):
+        self.render('wiki/welcome.html',**kw)
+
+########## WIKI Stuff
+
+class WikiEntry(db.Model):
+    title = db.StringProperty(required = True)
+    entry = db.TextProperty(required = True)
+    created = db.DateTimeProperty(auto_now_add = True)
+
+class WikiSignup(SignupPage):
+    def errortorender(self, *a, **kw):
+        self.render("wiki/signup.html", **kw)
+        print "\r<<<00>>>    ERRORTORENDER WIKI was calleed \r!!"
+        
+    def signupredirect(self, *a, **kw):
+        self.redirect('/wiki/welcome')
+        print "\r!!!!!!!!    SIGNUPREDIRECT WIKI was calleed \r!!"
+        
+    def get(self):
+        self.render("wiki/signup.html")
+
+class WikiMain(Handler):
+  
+    def get(self):
+            self.render("wiki/wikimain.html")    
+
+class WikiEditPage(Handler):
+  def get(self,wikititle):
+    #self.write("This is going to be editable at "+str(entry))
+    self.render("wiki/wikiedit.html",wikititle=wikititle[1:].upper() )
+    
+  def post(self,wikititle):
+          title = wikititle
+          entry = self.request.get("wikientry")
+          if title and entry:
+              a = WikiEntry(title = title, entry = entry)
+              a.put()
+              memcache.set(wikititle,(int(a.key().id()),entry,a.created))
+              self.redirect("/wiki"+wikititle)
+
+   
+    
+class WikiPage(Handler):
+  def get(self,wikititle):
+    record=memcache.get(str(wikititle))
+    if record==None:
+      self.redirect("/wiki/_edit"+wikititle)
+      return
+    if record:
+      titlefromrecord=wikititle[1:]
+      entryfromrecord=record[1]
+      self.render("wiki/wikipage.html",title=titlefromrecord,entry=entryfromrecord)
+
+
+
+
+
+
+PAGE_RE = r'(/(?:[a-zA-Z0-9_-]+/?)*)'
 app = webapp2.WSGIApplication([('/art', ArtPage),
                                ('/blog/newpost',NewPost),
                                ('/blog/([0-9]+)',PostPage),
@@ -394,7 +498,13 @@ app = webapp2.WSGIApplication([('/art', ArtPage),
                                ('/blog/login',LoginPage),
                                ('/blog/logout',LogoutPage),
                                ('/blog/flush',Memcache_flush),
-                              
+                               #('/wiki/?', WikiMain),
+                               #('/wiki/welcome',WikiWelcomePage),
+                               ('/wiki/signup', WikiSignup),
+                               ('/wiki/login', WikiLogin),
+                               ('/wiki/logout', LogoutPage),
+                               ('/wiki/_edit' + PAGE_RE, WikiEditPage),
+                               ('/wiki'+ PAGE_RE, WikiPage),
                                ('/',MainPage),
                               
                               
