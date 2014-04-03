@@ -460,7 +460,7 @@ class WikiEditPage(Handler):
     
   def post(self,wikititle):
           title = wikititle
-          entry = self.request.get("wikientry")
+          entry = self.request.get("content")
           if title and entry:
               a = WikiEntry(title = title, entry = entry)
               a.put()
@@ -480,7 +480,21 @@ class WikiPage(Handler):
       entryfromrecord=record[1]
       self.render("wiki/wikipage.html",title=titlefromrecord,entry=entryfromrecord)
 
+class WikiHistory(Handler):
+  def get(self,wikititle):
+    record=memcache.get(str(wikititle))
+    if record==None:
+      self.redirect("/wiki/_edit"+wikititle)
+      return
+    if record:
+      wikientries = db.GqlQuery("""SELECT * 
+                                  FROM WikiEntry
+                                  WHERE title='%s'
+                                  ORDER BY
+                                  created DESC
+                                  """%wikititle)
 
+      self.render("wiki/wikihistory.html",wikientries=wikientries)
 
 
 
@@ -500,6 +514,7 @@ app = webapp2.WSGIApplication([('/art', ArtPage),
                                ('/blog/flush',Memcache_flush),
                                #('/wiki/?', WikiMain),
                                #('/wiki/welcome',WikiWelcomePage),
+                               ('/wiki/_history'+ PAGE_RE, WikiHistory),
                                ('/wiki/signup', WikiSignup),
                                ('/wiki/login', WikiLogin),
                                ('/wiki/logout', LogoutPage),

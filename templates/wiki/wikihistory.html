@@ -1,0 +1,19 @@
+{% extends  "wiki/base.html" %}
+
+{% block content %}
+
+<table border="1" style="width:300px">
+	
+	{% for e in wikientries %}
+	<tr>
+		<td>{{e.created}}</td>
+		<td>{{e.entry}}</td>		
+		<td>	<a href="/wiki{{e.title}}">View</a></td>
+		<td>	<a href="/wiki/_edit{{e.title}}">Edit</a></td>
+	</tr>
+{% endfor %}
+
+</table>
+
+	
+{% endblock %}

@@ -158,3 +158,8 @@ hr {
 	margin:5px;
 	text-align:center;
 }
+
+td{
+border:1px solid black;
+border-collapse:collapse
+}
