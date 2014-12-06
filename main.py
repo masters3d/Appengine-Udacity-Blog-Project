@@ -16,7 +16,7 @@ class Art(db.Model):
     title = db.StringProperty(required = True)
     art = db.TextProperty(required = True)
     created = db.DateTimeProperty(auto_now_add = True)
-    
+
 
 class Handler(webapp2.RequestHandler):
     def write(self, *a, **kw):
@@ -26,17 +26,30 @@ class Handler(webapp2.RequestHandler):
         return t.render(params)
     def render(self, template, **kw):
         self.write(self.render_str(template, **kw))
-    
+
+
 class MainPage(Handler):
   def get(self):
-    self.redirect("/blog")
-    
-    
+    #self.redirect("/blog")
+    self.render('/MainPage.html' )
+    #print("MainPage Should render")
+
+class RedirectWikiPage(Handler):
+  def get(self):
+    self.redirect("/wiki/")
+
+class RedirectArtPage(Handler):
+  def get(self):
+    self.redirect("/art")
+
+
+
+
 
 class ArtPage(Handler):
-      
+
     def render_front(self, title="", art="", error=""):
-        arts = db.GqlQuery("""SELECT * 
+        arts = db.GqlQuery("""SELECT *
                             FROM Art
                             ORDER BY
                             created DESC
@@ -46,7 +59,7 @@ class ArtPage(Handler):
 
     def get(self):
         self.render_front()
-            
+
     def post(self):
         title = self.request.get("title")
         art = self.request.get("art")
@@ -54,11 +67,11 @@ class ArtPage(Handler):
             a = Art(title = title, art = art)
             a.put()
             self.redirect("/art")
-            
+
         else:
-            error = "we need both a title and some artwork!" 
-            self.render_front(title, art, error)     
-    
+            error = "we need both a title and some artwork!"
+            self.render_front(title, art, error)
+
 ## Blog Stuff
 
 
@@ -66,13 +79,13 @@ class ArtPage(Handler):
 def blog_key(name ='default'):
   return db.Key.from_path('blogs', name)
 
- 
+
 
 def age_set(key, val):
     save_time=datetime.utcnow()
     memcache.set(key,(val,save_time))
 
-  
+
 def age_get(key):
   record=memcache.get(key)
   if record:
@@ -84,17 +97,17 @@ def age_get(key):
     #print save_time
     #print age
   else:
-    val, age=None,0  
+    val, age=None,0
   return val, age
-    
 
-  
+
+
 class Post(db.Model,Handler):
   subject = db.StringProperty(required =True)
   content = db.TextProperty(required = True)
   created = db.DateTimeProperty(auto_now_add = True)
   last_modified = db.DateTimeProperty(auto_now = True)
-  
+
   def render(self):
     self._render_text = self.content.replace('\n','<br>')
     return self.render_str("blog/post.html",p = self)
@@ -102,7 +115,7 @@ class Post(db.Model,Handler):
 def update_cache_frontpage():
   posts = greetings = Post.all().order('-created').fetch(limit = 10)
   age_set("blogfrontpage", posts)
-  
+
 class Memcache_flush(Handler):
   def get(self):
     memcache.flush_all()
@@ -113,13 +126,13 @@ class BlogFront(Handler):
     retrived=0
     #print "this is the blog key  "+str(blog_key())
     cache=age_get("blogfrontpage")
-    
+
     if cache[1]!=0:
       posts=age_get("blogfrontpage")[0]
     else:
       update_cache_frontpage()
       posts=age_get("blogfrontpage")[0]
-    
+
     retrived=int(age_get("blogfrontpage")[1])
     self.render("blog/front.html",posts=posts,retrived=retrived)
 
@@ -127,7 +140,7 @@ class BlogFrontJson(Handler):
   def get(self):
     posts=Post.all().order('-created')
     posts=posts[0:10]
-    
+
     json_posts=[]
     for each in posts:
       json_posts.append(jsonrespond(each))
@@ -140,12 +153,12 @@ class PostPage(Handler):
     ##post_id=str(self.request.url)[-16:]
     #self.write(post_id)
     #post_id=4642138092470272
-    
+
     key = db.Key.from_path('Post', int(post_id), parent = blog_key())
     #print "this is the the str(key):::::::"+str(key)
     post_id_key=str(post_id)
     cache=age_get(post_id_key)
-    
+
     if cache[1]!=0:
       post=age_get(post_id_key)[0]
     if cache[1]==0:
@@ -156,12 +169,12 @@ class PostPage(Handler):
     elif post==None:
       self.error(404)
       return
-      
+
     retrived=int(age_get(post_id_key)[1])
     self.render('blog/permalink.html', post = post,retrived=retrived)
-      
 
-   
+
+
 
 
 def jsonrespond(post):
@@ -185,16 +198,16 @@ class PostPageJson(Handler):
     self.error(404)
 
 
-    
+
 
 class NewPost(Handler):
   def get(self):
     self.render('blog/newpost.html')
-  
+
   def post(self):
     subject = self.request.get('subject')
     content = self.request.get('content')
-    
+
     if subject and content:
       p = Post(parent = blog_key(), subject = subject, content = content)
       p.put()
@@ -221,20 +234,20 @@ def validate_input(text,kind):# "username","password","email"
 
 
 class SignupPage(Handler):
-  
+
     def errortorender(self, *a, **kw):
         self.render("blog/signup.html", **kw)
         print "\r<<<00>>>    ERRORTORENDER was calleed successfully\r!!"
-        
+
     def signupredirect(self, *a, **kw):
         self.redirect('welcome')
         print "\r!!!!!!!!    SIGNUPREDIRECT was calleed successfully!!\r!!"
 
-        
+
     def get(self):
         self.render("blog/signup.html")
 
-    
+
 
     def post(self):
         have_error = False
@@ -245,8 +258,8 @@ class SignupPage(Handler):
 
 
         params = dict(username = username, email = email)
-        
-        
+
+
         user_username= self.request.get("username")
         user_password= self.request.get("password")
         user_verify=   self.request.get("verify")
@@ -254,10 +267,10 @@ class SignupPage(Handler):
         valid_username=validate_input(user_username,"username")
         valid_password=validate_input(user_password,"password")
         valid_email=validate_input(user_email,"email")
-        
+
         if user_email=="":
           valid_email=True
-                
+
         if user_verify ==user_password:
             verified_password=True
         else:verified_password=False
@@ -265,14 +278,14 @@ class SignupPage(Handler):
         if not valid_username:
             params['error_username'] = "Invalid username, please try again"
             have_error = True
-            
+
         allusernames = db.GqlQuery("SELECT username FROM UserData ORDER BY created DESC")
         for each in allusernames:
             if str(valid_username) in each.username:
                 params['error_username'] = "Username already exist, please try again"
                 have_error = True
-          
-        
+
+
         if not valid_password:
             params['error_password'] = "Password is not valid, try again"
             have_error = True
@@ -293,9 +306,9 @@ class SignupPage(Handler):
 
         else:
             salt=bcrypt.gensalt(2)
-            u = UserData(username = username, 
-                        usersalt  = salt, 
-                        userpass  = bcrypt.hashpw(password,salt), 
+            u = UserData(username = username,
+                        usersalt  = salt,
+                        userpass  = bcrypt.hashpw(password,salt),
                         useremail = email, )
             u.put()
             cookieuserid=str(u.key().id())
@@ -306,7 +319,7 @@ class SignupPage(Handler):
 
 
 
-            
+
 ###USER DATA###
 
 class UserData(db.Model,Handler):
@@ -316,20 +329,20 @@ class UserData(db.Model,Handler):
   useremail  = db.EmailProperty
   created = db.DateTimeProperty(auto_now_add = True)
   last_modified = db.DateTimeProperty(auto_now = True)
-  
 
 
-  
+
+
 class LoginPage(Handler):
-  
+
     def errortorender(self, *a, **kw):
         self.render("blog/login.html", **kw)
         print "\r<<<00>>>    ERRORTORENDER was calleed successfully\r!!"
-        
+
     def loginredirect(self, *a, **kw):
         self.redirect('welcome')
         print "\r!!!!!!!!    SIGNUPREDIRECT was calleed successfully!!\r!!"
-    
+
     def get(self):
             self.render("blog/login.html")
 
@@ -340,33 +353,33 @@ class LoginPage(Handler):
       userid=0
       params = dict(username = username)
 
-      
+
       allusernames = db.GqlQuery("SELECT username FROM UserData ORDER BY created DESC")
       for each in allusernames:
           if str(username) in each.username:
               userid=int(each.key().id())
-              
+
       if userid==0:
         params['error_username'] = "Username doesn't exist, please try again"
         have_error = True
-        
+
       if userid!=0:
         index_u=db.Key.from_path('UserData',int(userid))
-        u=db.get(index_u)  
+        u=db.get(index_u)
         if bcrypt.hashpw(password, str(u.usersalt)) == str(u.userpass):
           password_valid=True
         else:
           password_valid=False
-                    
+
         if password_valid ==False:
           params['error_password'] = "Wrong password, please try again"
           have_error = True
 
-        
+
       if have_error:
           self.errortorender(**params)
           #self.render("blog/login.html", **params)
-      
+
       else:
           cookieruserid_hashed=bcrypt.hashpw(str(userid),u.usersalt)
           cookietemp=str('name='+str(userid)+'|'+cookieruserid_hashed)
@@ -375,32 +388,32 @@ class LoginPage(Handler):
           self.loginredirect()
 
 class WikiLogin(LoginPage):
-  
+
     def errortorender(self, *a, **kw):
         self.render("wiki/login.html", **kw)
         print "\r<<<00>>>    ERRORTORENDER was calleed successfully\r!!"
-        
+
     def loginredirect(self, *a, **kw):
         self.redirect('/')
         print "\r!!!!!!!!    SIGNUPREDIRECT was calleed successfully!!\r!!"
     def get(self):
         self.render("wiki/login.html")
 
-          
+
 class LogoutPage(Handler):
-  
+
     def get(self):
       self.response.headers.add_header('Set-Cookie','name=;Path=/')
       #params = dict(user_headsup="You have been logged out")
       self.redirect('signup')
 
 
-     
+
 
 class WelcomePage(Handler):
     def renderwelcomepage(self, *a, **kw):
         self.render('blog/welcome.html',**kw)
-  
+
     def get(self):
         #self.response.headers['Content-Type'] ='text/plain'
         cookieusernid  = (self.request.cookies.get('name')).split('|')[0]
@@ -414,14 +427,14 @@ class WelcomePage(Handler):
         else:
                 #print "It does not match"
                 userid_valid=False
-                
-                
+
+
         #print "this is the username= "+ str(u.username)
-        
+
         if userid_valid:
           #self.render('blog/welcome.html', username = u.username)
           self.renderwelcomepage(username = u.username)
-    
+
         else: #Need to add cookies intead to this
           self.redirect('signup')
 
@@ -440,24 +453,24 @@ class WikiSignup(SignupPage):
     def errortorender(self, *a, **kw):
         self.render("wiki/signup.html", **kw)
         print "\r<<<00>>>    ERRORTORENDER WIKI was calleed \r!!"
-        
+
     def signupredirect(self, *a, **kw):
         self.redirect('/wiki/welcome')
         print "\r!!!!!!!!    SIGNUPREDIRECT WIKI was calleed \r!!"
-        
+
     def get(self):
         self.render("wiki/signup.html")
 
 class WikiMain(Handler):
-  
+
     def get(self):
-            self.render("wiki/wikimain.html")    
+            self.render("wiki/wikimain.html")
 
 class WikiEditPage(Handler):
   def get(self,wikititle):
     #self.write("This is going to be editable at "+str(entry))
     self.render("wiki/wikiedit.html",wikititle=wikititle[1:].upper() )
-    
+
   def post(self,wikititle):
           title = wikititle
           entry = self.request.get("content")
@@ -467,8 +480,8 @@ class WikiEditPage(Handler):
               memcache.set(wikititle,(int(a.key().id()),entry,a.created))
               self.redirect("/wiki"+wikititle)
 
-   
-    
+
+
 class WikiPage(Handler):
   def get(self,wikititle):
     record=memcache.get(str(wikititle))
@@ -487,7 +500,7 @@ class WikiHistory(Handler):
       self.redirect("/wiki/_edit"+wikititle)
       return
     if record:
-      wikientries = db.GqlQuery("""SELECT * 
+      wikientries = db.GqlQuery("""SELECT *
                                   FROM WikiEntry
                                   WHERE title='%s'
                                   ORDER BY
@@ -501,6 +514,7 @@ class WikiHistory(Handler):
 
 PAGE_RE = r'(/(?:[a-zA-Z0-9_-]+/?)*)'
 app = webapp2.WSGIApplication([('/art', ArtPage),
+                               ('/art/',RedirectArtPage),
                                ('/blog/newpost',NewPost),
                                ('/blog/([0-9]+)',PostPage),
                                ('/blog/([0-9]+).json',PostPageJson),
@@ -512,6 +526,7 @@ app = webapp2.WSGIApplication([('/art', ArtPage),
                                ('/blog/login',LoginPage),
                                ('/blog/logout',LogoutPage),
                                ('/blog/flush',Memcache_flush),
+                               ('/wiki', RedirectWikiPage),
                                #('/wiki/?', WikiMain),
                                #('/wiki/welcome',WikiWelcomePage),
                                ('/wiki/_history'+ PAGE_RE, WikiHistory),
@@ -521,6 +536,6 @@ app = webapp2.WSGIApplication([('/art', ArtPage),
                                ('/wiki/_edit' + PAGE_RE, WikiEditPage),
                                ('/wiki'+ PAGE_RE, WikiPage),
                                ('/',MainPage),
-                              
-                              
+
+
                               ], debug=True)
