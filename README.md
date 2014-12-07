@@ -11,6 +11,8 @@ Uses jinja2, bcrypt, webapp2 and json
 JSON support
 http://cheyomasters3d.appspot.com/blog/.json
 "Queried x seconds ago"  where x is the seconds since objects have been in memcache. 
+Uses  memcache and db from google appengine api
+
 
 #### User Support 
 Users' paswords are saved in hashed fashing using a different salt per user. 
