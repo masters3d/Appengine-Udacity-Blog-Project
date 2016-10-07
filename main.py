@@ -27,7 +27,6 @@ class Handler(webapp2.RequestHandler):
     def render(self, template, **kw):
         self.write(self.render_str(template, **kw))
 
-
 class MainPage(Handler):
   def get(self):
     #self.redirect("/blog")
@@ -42,12 +41,7 @@ class RedirectArtPage(Handler):
   def get(self):
     self.redirect("/art")
 
-
-
-
-
 class ArtPage(Handler):
-
     def render_front(self, title="", art="", error=""):
         arts = db.GqlQuery("""SELECT *
                             FROM Art
@@ -74,11 +68,8 @@ class ArtPage(Handler):
 
 ## Blog Stuff
 
-
-
 def blog_key(name ='default'):
   return db.Key.from_path('blogs', name)
-
 
 
 def age_set(key, val):
@@ -99,7 +90,6 @@ def age_get(key):
   else:
     val, age=None,0
   return val, age
-
 
 
 class Post(db.Model,Handler):
@@ -148,8 +138,32 @@ class BlogFrontJson(Handler):
     self.response.headers['Content-Type'] ='application/json; charset=UTF-8'
     self.write(json.dumps(json_posts))
 
-
 class PostPage(Handler):
+  def delete(self,post_id):
+    key = db.Key.from_path('Post', int(post_id), parent = blog_key())
+    post = db.get(key)
+    cookieusername  = (self.request.cookies.get('name'))
+    if cookieusername == None or post.ownerid == long(cookieusername.split('|')[0]) :
+        self.error(401)
+        return
+
+    post.delete()
+    update_cache_frontpage()
+    self.response.headers['ServerResponse'] ='Delete Request Sent'
+
+  def post(self,post_id):
+    key = db.Key.from_path('Post', int(post_id), parent = blog_key())
+    post = db.get(key)
+    cookieusername  = (self.request.cookies.get('name'))
+    if cookieusername == None or post.ownerid == long(cookieusername.split('|')[0]) :
+        self.error(401)
+        return
+    post.subject = self.request.get('subject')
+    post.content = self.request.get('content')
+    post.put()
+    update_cache_frontpage()
+    self.response.headers['ServerResponse'] ='Update Request Sent'
+
   def get(self,post_id):
     ##post_id=str(self.request.url)[-16:]
     #self.write(post_id)
@@ -174,10 +188,6 @@ class PostPage(Handler):
     retrived=int(age_get(post_id_key)[1])
     self.render('blog/permalink.html', post = post,retrived=retrived)
 
-
-
-
-
 def jsonrespond(post):
   post._render_text = post.content.replace('\n','<br>')
   jsondict={"content":post._render_text,
@@ -185,7 +195,6 @@ def jsonrespond(post):
             "subject":post.subject,
             "postid": post.key().id()}
   return jsondict
-
 
 
 class PostPageJson(Handler):
@@ -199,9 +208,6 @@ class PostPageJson(Handler):
       return
     self.error(404)
 
-
-
-
 class NewPost(Handler):
   def get(self):
     self.render('blog/newpost.html')
@@ -210,8 +216,6 @@ class NewPost(Handler):
     subject = self.request.get('subject')
     content = self.request.get('content')
     cookieusername  = (self.request.cookies.get('name'))
-    print("this is the cookieusername")
-    print(cookieusername)
 
     if cookieusername == None:
         self.redirect('signup')
@@ -407,9 +411,6 @@ class LogoutPage(Handler):
       self.response.headers.add_header('Set-Cookie','name=;Path=/')
       #params = dict(user_headsup="You have been logged out")
       self.redirect('signup')
-
-
-
 
 class WelcomePage(Handler):
     def renderwelcomepage(self, *a, **kw):
