@@ -107,6 +107,7 @@ class Post(db.Model,Handler):
   content = db.TextProperty(required = True)
   created = db.DateTimeProperty(auto_now_add = True)
   last_modified = db.DateTimeProperty(auto_now = True)
+  ownerid = db.IntegerProperty()
 
   def render(self):
     self._render_text = self.content.replace('\n','<br>')
@@ -181,7 +182,8 @@ def jsonrespond(post):
   post._render_text = post.content.replace('\n','<br>')
   jsondict={"content":post._render_text,
             "created":post.created.strftime("%b %d, %Y"),
-            "subject":post.subject}
+            "subject":post.subject,
+            "postid": post.key().id()}
   return jsondict
 
 
@@ -207,9 +209,18 @@ class NewPost(Handler):
   def post(self):
     subject = self.request.get('subject')
     content = self.request.get('content')
+    cookieusername  = (self.request.cookies.get('name'))
+    print("this is the cookieusername")
+    print(cookieusername)
+
+    if cookieusername == None:
+        self.redirect('signup')
+        return
+
+    cookieusernidnumber = long(cookieusername.split('|')[0])
 
     if subject and content:
-      p = Post(parent = blog_key(), subject = subject, content = content)
+      p = Post(parent = blog_key(), subject = subject, content = content, ownerid = cookieusernidnumber)
       p.put()
       self.redirect('/blog/%s' %str(p.key().id()))
     else:
@@ -243,11 +254,8 @@ class SignupPage(Handler):
         self.redirect('welcome')
         print "\r!!!!!!!!    SIGNUPREDIRECT was calleed successfully!!\r!!"
 
-
     def get(self):
         self.render("blog/signup.html")
-
-
 
     def post(self):
         have_error = False
@@ -256,9 +264,7 @@ class SignupPage(Handler):
         verify = self.request.get('verify')
         email = self.request.get('email')
 
-
         params = dict(username = username, email = email)
-
 
         user_username= self.request.get("username")
         user_password= self.request.get("password")
@@ -318,8 +324,6 @@ class SignupPage(Handler):
             self.signupredirect()
 
 
-
-
 ###USER DATA###
 
 class UserData(db.Model,Handler):
@@ -329,8 +333,6 @@ class UserData(db.Model,Handler):
   useremail  = db.EmailProperty
   created = db.DateTimeProperty(auto_now_add = True)
   last_modified = db.DateTimeProperty(auto_now = True)
-
-
 
 
 class LoginPage(Handler):
@@ -374,7 +376,6 @@ class LoginPage(Handler):
         if password_valid ==False:
           params['error_password'] = "Wrong password, please try again"
           have_error = True
-
 
       if have_error:
           self.errortorender(**params)
