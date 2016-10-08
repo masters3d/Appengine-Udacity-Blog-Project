@@ -149,7 +149,7 @@ class PostPage(Handler):
 
     post.delete()
     update_cache_frontpage()
-    self.response.headers['ServerResponse'] ='Delete Request Sent'
+    self.response.headers['server-response'] ='Delete Request Sent'
 
   def post(self,post_id):
     key = db.Key.from_path('Post', int(post_id), parent = blog_key())
@@ -162,7 +162,7 @@ class PostPage(Handler):
     post.content = self.request.get('content')
     post.put()
     update_cache_frontpage()
-    self.response.headers['ServerResponse'] ='Update Request Sent'
+    self.response.headers['server-response'] ='Update Request Sent'
 
   def get(self,post_id):
     ##post_id=str(self.request.url)[-16:]
@@ -267,6 +267,7 @@ class SignupPage(Handler):
         password = self.request.get('password')
         verify = self.request.get('verify')
         email = self.request.get('email')
+        apicall = self.request.headers.get("api", default="web")
 
         params = dict(username = username, email = email)
 
@@ -286,28 +287,38 @@ class SignupPage(Handler):
         else:verified_password=False
 
         if not valid_username:
-            params['error_username'] = "Invalid username, please try again"
+            responseString = "Invalid username, please try again"
+            params['error_username'] = responseString
+            self.response.headers['server-response'] = responseString
             have_error = True
 
         allusernames = db.GqlQuery("SELECT username FROM UserData ORDER BY created DESC")
         for each in allusernames:
             if str(valid_username) in each.username:
-                params['error_username'] = "Username already exist, please try again"
+                responseString = "Username already exist, please try again"
+                params['error_username'] = responseString
+                self.response.headers['server-response'] = responseString
                 have_error = True
 
 
         if not valid_password:
-            params['error_password'] = "Password is not valid, try again"
+            responseString = "Password is not valid, try again"
+            params['error_password'] = responseString
+            self.response.headers['server-response'] = responseString
             have_error = True
 
 
         elif not verified_password:
-            params['error_verify'] = "Your password didn't match"
+            responseString = "Your password didn't match"
+            params['error_verify'] = responseString
+            self.response.headers['server-response'] = responseString
             have_error = True
 
 
         if not valid_email:
-            params['error_email'] = "Invalid email try again"
+            responseString = "Invalid email try again"
+            self.response.headers['server-response'] = responseString
+            params['error_email'] = responseString
             have_error = True
 
 
@@ -325,7 +336,9 @@ class SignupPage(Handler):
             cookieruserid_hashed=bcrypt.hashpw(cookieuserid,u.usersalt)
             cookietemp=str('name='+cookieuserid+'|'+cookieruserid_hashed)
             self.response.headers.add_header('Set-Cookie',cookietemp+";Path=/")
-            self.signupredirect()
+            self.response.headers['server-response'] = "success"
+            if apicall == "web":
+                self.signupredirect()
 
 
 ###USER DATA###
@@ -337,7 +350,6 @@ class UserData(db.Model,Handler):
   useremail  = db.EmailProperty
   created = db.DateTimeProperty(auto_now_add = True)
   last_modified = db.DateTimeProperty(auto_now = True)
-
 
 class LoginPage(Handler):
 
@@ -358,7 +370,7 @@ class LoginPage(Handler):
       password = self.request.get('password')
       userid=0
       params = dict(username = username)
-
+      apicall = self.request.headers.get("api", default="web")
 
       allusernames = db.GqlQuery("SELECT username FROM UserData ORDER BY created DESC")
       for each in allusernames:
@@ -366,7 +378,9 @@ class LoginPage(Handler):
               userid=int(each.key().id())
 
       if userid==0:
-        params['error_username'] = "Username doesn't exist, please try again"
+        toRespond = "Username doesn't exist, please try again"
+        params['error_username'] = toRespond
+        self.response.headers['server-response'] = toRespond
         have_error = True
 
       if userid!=0:
@@ -378,7 +392,9 @@ class LoginPage(Handler):
           password_valid=False
 
         if password_valid ==False:
-          params['error_password'] = "Wrong password, please try again"
+          toRespond =  "Wrong password, please try again"
+          params['error_password'] = toRespond
+          self.response.headers['server-response'] = toRespond
           have_error = True
 
       if have_error:
@@ -389,8 +405,10 @@ class LoginPage(Handler):
           cookieruserid_hashed=bcrypt.hashpw(str(userid),u.usersalt)
           cookietemp=str('name='+str(userid)+'|'+cookieruserid_hashed)
           self.response.headers.add_header('Set-Cookie',cookietemp+";Path=/")
+          self.response.headers['server-response'] = "success"
           #self.redirect('welcome')
-          self.loginredirect()
+          if apicall == "web":
+              self.loginredirect()
 
 class WikiLogin(LoginPage):
 
