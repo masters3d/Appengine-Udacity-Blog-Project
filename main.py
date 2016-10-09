@@ -130,7 +130,9 @@ class BlogFront(Handler):
 class BlogFrontJson(Handler):
   def get(self):
     posts=Post.all().order('-created')
-    posts=posts[0:10]
+    apicall = self.request.headers.get("api", default="web")
+    if apicall == "web":
+        posts=posts[0:10]
 
     json_posts=[]
     for each in posts:
@@ -193,7 +195,9 @@ def jsonrespond(post):
   jsondict={"content":post._render_text,
             "created":post.created.strftime("%b %d, %Y"),
             "subject":post.subject,
-            "postid": post.key().id()}
+            "postid": post.key().id(),
+            "ownerid": post.ownerid
+            }
   return jsondict
 
 
