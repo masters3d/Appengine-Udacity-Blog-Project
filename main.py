@@ -193,10 +193,11 @@ class PostPage(Handler):
 def jsonrespond(post):
   post._render_text = post.content.replace('\n','<br>')
   jsondict={"content":post._render_text,
-            "created":post.created.strftime("%b %d, %Y"),
+            "created":post.created.isoformat(), #post.created.strftime("%b %d, %Y"),
             "subject":post.subject,
             "postid": post.key().id(),
-            "ownerid": post.ownerid
+            "ownerid": post.ownerid,
+            "last_modified": post.last_modified.isoformat()
             }
   return jsondict
 
