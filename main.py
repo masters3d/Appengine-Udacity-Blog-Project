@@ -505,6 +505,15 @@ class WikiEditPage(Handler):
               memcache.set(wikititle,(int(a.key().id()),entry,a.created))
               self.redirect("/wiki"+wikititle)
 
+class UserNameId(Handler):
+    def get(self, userid):
+      allusernames = db.GqlQuery("SELECT username FROM UserData ORDER BY created DESC")
+      username = "null"
+      for each in allusernames:
+          if int(userid) == int(each.key().id()):
+              username = str(each.username)
+      self.response.headers['server-response'] = username
+      self.write(username)
 
 
 class WikiPage(Handler):
@@ -541,6 +550,7 @@ PAGE_RE = r'(/(?:[a-zA-Z0-9_-]+/?)*)'
 app = webapp2.WSGIApplication([('/art', ArtPage),
                                ('/art/',RedirectArtPage),
                                ('/blog/newpost',NewPost),
+                               ('/blog/userid/([0-9]+)',UserNameId),
                                ('/blog/([0-9]+)',PostPage),
                                ('/blog/([0-9]+).json',PostPageJson),
                                ('/blog/?',BlogFront),
