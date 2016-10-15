@@ -144,8 +144,10 @@ class PostPage(Handler):
   def delete(self,post_id):
     key = db.Key.from_path('Post', int(post_id), parent = blog_key())
     post = db.get(key)
+    print(self.request.cookies)
     cookieusername  = (self.request.cookies.get('name'))
-    if cookieusername == None or post.ownerid == long(cookieusername.split('|')[0]) :
+    cookieStart = cookieusername.split('|')[0]
+    if cookieusername == None or post.ownerid != long(cookieStart) :
         self.error(401)
         return
 
@@ -157,12 +159,18 @@ class PostPage(Handler):
     key = db.Key.from_path('Post', int(post_id), parent = blog_key())
     post = db.get(key)
     cookieusername  = (self.request.cookies.get('name'))
-    if cookieusername == None or post.ownerid == long(cookieusername.split('|')[0]) :
+    if cookieusername == None or post.ownerid != long(cookieusername.split('|')[0]) :
         self.error(401)
         return
+
+    if key == None or post == None:
+        self.error(404)
+        return
+
     post.subject = self.request.get('subject')
     post.content = self.request.get('content')
     post.put()
+    print(post.content)
     update_cache_frontpage()
     self.response.headers['server-response'] ='Update Request Sent'
 
@@ -176,13 +184,13 @@ class PostPage(Handler):
     post_id_key=str(post_id)
     cache=age_get(post_id_key)
 
-    if cache[1]!=0:
-      post=age_get(post_id_key)[0]
-    if cache[1]==0:
+    if cache[1]==0 or cache[1] > 60: #reseting the cache every 60 seconds
       post = db.get(key)
       age_set(post_id_key, post)
       post = age_get(post_id_key)[0]
       update_cache_frontpage()
+    if cache[1] <= 60:
+      post=age_get(post_id_key)[0]
     elif post==None:
       self.error(404)
       return
@@ -223,6 +231,7 @@ class NewPost(Handler):
     cookieusername  = (self.request.cookies.get('name'))
 
     if cookieusername == None:
+        print(self.request)
         self.redirect('signup')
         return
 
