@@ -157,20 +157,22 @@ class PostPage(Handler):
 
   def post(self,post_id):
     key = db.Key.from_path('Post', int(post_id), parent = blog_key())
+    if key == None:
+        self.error(404)
+        return
     post = db.get(key)
     cookieusername  = (self.request.cookies.get('name'))
     if cookieusername == None or post.ownerid != long(cookieusername.split('|')[0]) :
         self.error(401)
         return
 
-    if key == None or post == None:
+    if post == None:
         self.error(404)
         return
 
     post.subject = self.request.get('subject')
     post.content = self.request.get('content')
     post.put()
-    print(post.content)
     update_cache_frontpage()
     self.response.headers['server-response'] ='Update Request Sent'
 
@@ -217,7 +219,9 @@ class PostPageJson(Handler):
     post = db.get(key)
     if post != None:
       self.response.headers['Content-Type'] ='application/json; charset=UTF-8'
-      self.write(str(json.dumps(jsonrespond(post))))
+      stringRepresentation = json.dumps(jsonrespond(post)).encode('utf-8').strip()
+
+      self.write(stringRepresentation)
       return
     self.error(404)
 
