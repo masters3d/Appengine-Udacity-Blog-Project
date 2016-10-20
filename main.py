@@ -557,8 +557,6 @@ class WikiHistory(Handler):
       self.render("wiki/wikihistory.html",wikientries=wikientries)
 
 
-
-
 PAGE_RE = r'(/(?:[a-zA-Z0-9_-]+/?)*)'
 app = webapp2.WSGIApplication([('/art', ArtPage),
                                ('/art/',RedirectArtPage),
