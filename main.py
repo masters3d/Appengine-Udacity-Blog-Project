@@ -32,9 +32,7 @@ class Handler(webapp2.RequestHandler):
 
 class MainPage(Handler):
     def get(self):
-        #self.redirect("/blog")
         self.render('/MainPage.html' )
-        #print("MainPage Should render")
 
 
 class RedirectWikiPage(Handler):
@@ -75,31 +73,27 @@ class ArtPage(Handler):
 # Blog Stuff
 
 
-def blog_key(name ='default'):
-  return db.Key.from_path('blogs', name)
+def blog_key(name = 'default'):
+    return db.Key.from_path('blogs', name)
 
 
 def age_set(key, val):
-    save_time=datetime.utcnow()
+    save_time = datetime.utcnow()
     memcache.set(key,(val,save_time))
 
 
 def age_get(key):
-    record=memcache.get(key)
+    record = memcache.get(key)
     if record:
-        val,save_time = record
-        age =(datetime.utcnow()-save_time).total_seconds()
-        #print key
-        #print datetime.utcnow()
-        #print save_time
-        #print age
+        val, save_time = record
+        age = (datetime.utcnow()-save_time).total_seconds()
     else:
-        val, age=None,0
+        val, age = None, 0
     return val, age
 
 
-class Post(db.Model,Handler):
-    subject = db.StringProperty(required =True)
+class Post(db.Model, Handler):
+    subject = db.StringProperty(required = True)
     content = db.TextProperty(required = True)
     created = db.DateTimeProperty(auto_now_add = True)
     last_modified = db.DateTimeProperty(auto_now = True)
@@ -109,9 +103,10 @@ class Post(db.Model,Handler):
         self._render_text = self.content.replace('\n','<br>')
         return self.render_str("blog/post.html",p = self)
 
-    def update_cache_frontpage():
-        posts = greetings = Post.all().order('-created').fetch(limit = 10)
-        age_set("blogfrontpage", posts)
+
+def update_cache_frontpage():
+    posts = greetings = Post.all().order('-created').fetch(limit = 10)
+    age_set("blogfrontpage", posts)
 
 class Memcache_flush(Handler):
     def get(self):
@@ -121,7 +116,6 @@ class Memcache_flush(Handler):
 class BlogFront(Handler):
     def get(self):
         retrived=0
-        #print "this is the blog key  "+str(blog_key())
         cache=age_get("blogfrontpage")
 
         if cache[1]!=0:
@@ -130,8 +124,8 @@ class BlogFront(Handler):
             update_cache_frontpage()
             posts=age_get("blogfrontpage")[0]
 
-    retrived=int(age_get("blogfrontpage")[1])
-    self.render("blog/front.html",posts=posts,retrived=retrived)
+        retrived=int(age_get("blogfrontpage")[1])
+        self.render("blog/front.html",posts=posts,retrived=retrived)
 
 
 class BlogFrontJson(Handler):
@@ -151,7 +145,6 @@ class PostPage(Handler):
     def delete(self,post_id):
       key = db.Key.from_path('Post', int(post_id), parent = blog_key())
       post = b.get(key)
-      print(self.request.cookies)
       cookieusername  = (self.request.cookies.get('name'))
       cookieStart = cookieusername.split('|')[0]
       if cookieusername == None or post.ownerid != long(cookieStart) :
@@ -277,11 +270,9 @@ class SignupPage(Handler):
 
     def errortorender(self, *a, **kw):
         self.render("blog/signup.html", **kw)
-        print "\r<<<00>>>    ERRORTORENDER was calleed successfully\r!!"
 
     def signupredirect(self, *a, **kw):
         self.redirect('welcome')
-        print "\r!!!!!!!!    SIGNUPREDIRECT was calleed successfully!!\r!!"
 
     def get(self):
         self.render("blog/signup.html")
@@ -380,11 +371,9 @@ class LoginPage(Handler):
 
     def errortorender(self, *a, **kw):
         self.render("blog/login.html", **kw)
-        print "\r<<<00>>>    ERRORTORENDER was calleed successfully\r!!"
 
     def loginredirect(self, *a, **kw):
         self.redirect('welcome')
-        print "\r!!!!!!!!    SIGNUPREDIRECT was calleed successfully!!\r!!"
 
     def get(self):
             self.render("blog/login.html")
@@ -439,11 +428,9 @@ class WikiLogin(LoginPage):
 
     def errortorender(self, *a, **kw):
         self.render("wiki/login.html", **kw)
-        print "\r<<<00>>>    ERRORTORENDER was calleed successfully\r!!"
 
     def loginredirect(self, *a, **kw):
         self.redirect('/')
-        print "\r!!!!!!!!    SIGNUPREDIRECT was calleed successfully!!\r!!"
     def get(self):
         self.render("wiki/login.html")
 
@@ -455,12 +442,12 @@ class LogoutPage(Handler):
       #params = dict(user_headsup="You have been logged out")
       self.redirect('signup')
 
+
 class WelcomePage(Handler):
     def renderwelcomepage(self, *a, **kw):
         self.render('blog/welcome.html',**kw)
 
     def get(self):
-        #self.response.headers['Content-Type'] ='text/plain'
         cookieusernid  = (self.request.cookies.get('name')).split('|')[0]
         cookiehash     = (self.request.cookies.get('name')).split('|')[1]
         pre_u=db.Key.from_path('UserData', int(cookieusernid))#, parent = db.Key.from_path("users","default"))
@@ -473,15 +460,13 @@ class WelcomePage(Handler):
                 #print "It does not match"
                 userid_valid=False
 
-
-        #print "this is the username= "+ str(u.username)
-
         if userid_valid:
           #self.render('blog/welcome.html', username = u.username)
           self.renderwelcomepage(username = u.username)
 
         else: #Need to add cookies intead to this
           self.redirect('signup')
+
 
 class WikiWelcomePage(WelcomePage):
     def renderwelcomepage(self, *a, **kw):
@@ -493,6 +478,7 @@ class WikiEntry(db.Model):
     title = db.StringProperty(required = True)
     entry = db.TextProperty(required = True)
     created = db.DateTimeProperty(auto_now_add = True)
+
 
 class WikiSignup(SignupPage):
     def errortorender(self, *a, **kw):
@@ -506,10 +492,12 @@ class WikiSignup(SignupPage):
     def get(self):
         self.render("wiki/signup.html")
 
+
 class WikiMain(Handler):
 
     def get(self):
             self.render("wiki/wikimain.html")
+
 
 class WikiEditPage(Handler):
   def get(self,wikititle):
@@ -582,8 +570,6 @@ app = webapp2.WSGIApplication([('/art', ArtPage),
                                ('/blog/logout',LogoutPage),
                                ('/blog/flush',Memcache_flush),
                                ('/wiki', RedirectWikiPage),
-                               #('/wiki/?', WikiMain),
-                               #('/wiki/welcome',WikiWelcomePage),
                                ('/wiki/_history'+ PAGE_RE, WikiHistory),
                                ('/wiki/signup', WikiSignup),
                                ('/wiki/login', WikiLogin),
@@ -591,6 +577,5 @@ app = webapp2.WSGIApplication([('/art', ArtPage),
                                ('/wiki/_edit' + PAGE_RE, WikiEditPage),
                                ('/wiki'+ PAGE_RE, WikiPage),
                                ('/',MainPage),
-
 
                               ], debug=True)
