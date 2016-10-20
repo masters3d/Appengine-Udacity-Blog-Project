@@ -6,11 +6,11 @@ from google.appengine.ext import db
 from google.appengine.api import memcache
 import bcrypt
 import json
-import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), autoescape=True)
+
 
 class Art(db.Model):
     title = db.StringProperty(required = True)
@@ -21,25 +21,31 @@ class Art(db.Model):
 class Handler(webapp2.RequestHandler):
     def write(self, *a, **kw):
         self.response.out.write(*a, **kw)
+
     def render_str(self, template, **params):
         t = jinja_env.get_template(template)
         return t.render(params)
+
     def render(self, template, **kw):
         self.write(self.render_str(template, **kw))
 
+
 class MainPage(Handler):
-  def get(self):
-    #self.redirect("/blog")
-    self.render('/MainPage.html' )
-    #print("MainPage Should render")
+    def get(self):
+        #self.redirect("/blog")
+        self.render('/MainPage.html' )
+        #print("MainPage Should render")
+
 
 class RedirectWikiPage(Handler):
-  def get(self):
-    self.redirect("/wiki/")
+    def get(self):
+        self.redirect("/wiki/")
+
 
 class RedirectArtPage(Handler):
-  def get(self):
-    self.redirect("/art")
+      def get(self):
+        self.redirect("/art")
+
 
 class ArtPage(Handler):
     def render_front(self, title="", art="", error=""):
@@ -66,7 +72,8 @@ class ArtPage(Handler):
             error = "we need both a title and some artwork!"
             self.render_front(title, art, error)
 
-## Blog Stuff
+# Blog Stuff
+
 
 def blog_key(name ='default'):
   return db.Key.from_path('blogs', name)
@@ -78,138 +85,138 @@ def age_set(key, val):
 
 
 def age_get(key):
-  record=memcache.get(key)
-  if record:
-    val,save_time = record
-
-    age =(datetime.utcnow()-save_time).total_seconds()
-    #print key
-    #print datetime.utcnow()
-    #print save_time
-    #print age
-  else:
-    val, age=None,0
-  return val, age
+    record=memcache.get(key)
+    if record:
+        val,save_time = record
+        age =(datetime.utcnow()-save_time).total_seconds()
+        #print key
+        #print datetime.utcnow()
+        #print save_time
+        #print age
+    else:
+        val, age=None,0
+    return val, age
 
 
 class Post(db.Model,Handler):
-  subject = db.StringProperty(required =True)
-  content = db.TextProperty(required = True)
-  created = db.DateTimeProperty(auto_now_add = True)
-  last_modified = db.DateTimeProperty(auto_now = True)
-  ownerid = db.IntegerProperty()
+    subject = db.StringProperty(required =True)
+    content = db.TextProperty(required = True)
+    created = db.DateTimeProperty(auto_now_add = True)
+    last_modified = db.DateTimeProperty(auto_now = True)
+    ownerid = db.IntegerProperty()
 
-  def render(self):
-    self._render_text = self.content.replace('\n','<br>')
-    return self.render_str("blog/post.html",p = self)
+    def render(self):
+        self._render_text = self.content.replace('\n','<br>')
+        return self.render_str("blog/post.html",p = self)
 
-def update_cache_frontpage():
-  posts = greetings = Post.all().order('-created').fetch(limit = 10)
-  age_set("blogfrontpage", posts)
+    def update_cache_frontpage():
+        posts = greetings = Post.all().order('-created').fetch(limit = 10)
+        age_set("blogfrontpage", posts)
 
 class Memcache_flush(Handler):
-  def get(self):
-    memcache.flush_all()
-    self.redirect("/")
+    def get(self):
+        memcache.flush_all()
+        self.redirect("/")
 
 class BlogFront(Handler):
-  def get(self):
-    retrived=0
-    #print "this is the blog key  "+str(blog_key())
-    cache=age_get("blogfrontpage")
+    def get(self):
+        retrived=0
+        #print "this is the blog key  "+str(blog_key())
+        cache=age_get("blogfrontpage")
 
-    if cache[1]!=0:
-      posts=age_get("blogfrontpage")[0]
-    else:
-      update_cache_frontpage()
-      posts=age_get("blogfrontpage")[0]
+        if cache[1]!=0:
+            posts=age_get("blogfrontpage")[0]
+        else:
+            update_cache_frontpage()
+            posts=age_get("blogfrontpage")[0]
 
     retrived=int(age_get("blogfrontpage")[1])
     self.render("blog/front.html",posts=posts,retrived=retrived)
 
-class BlogFrontJson(Handler):
-  def get(self):
-    posts=Post.all().order('-created')
-    apicall = self.request.headers.get("api", default="web")
-    if apicall == "web":
-        posts=posts[0:10]
 
-    json_posts=[]
-    for each in posts:
-      json_posts.append(jsonrespond(each))
-    self.response.headers['Content-Type'] ='application/json; charset=UTF-8'
-    self.write(json.dumps(json_posts))
+class BlogFrontJson(Handler):
+    def get(self):
+      posts=Post.all().order('-created')
+      apicall = self.request.headers.get("api", default="web")
+      if apicall == "web":
+          posts=posts[0:10]
+      json_posts=[]
+      for each in posts:
+        json_posts.append(jsonrespond(each))
+      self.response.headers['Content-Type'] ='application/json; charset=UTF-8'
+      self.write(json.dumps(json_posts))
+
 
 class PostPage(Handler):
-  def delete(self,post_id):
-    key = db.Key.from_path('Post', int(post_id), parent = blog_key())
-    post = db.get(key)
-    print(self.request.cookies)
-    cookieusername  = (self.request.cookies.get('name'))
-    cookieStart = cookieusername.split('|')[0]
-    if cookieusername == None or post.ownerid != long(cookieStart) :
-        self.error(401)
-        return
+    def delete(self,post_id):
+      key = db.Key.from_path('Post', int(post_id), parent = blog_key())
+      post = b.get(key)
+      print(self.request.cookies)
+      cookieusername  = (self.request.cookies.get('name'))
+      cookieStart = cookieusername.split('|')[0]
+      if cookieusername == None or post.ownerid != long(cookieStart) :
+          self.error(401)
+          return
 
-    post.delete()
-    update_cache_frontpage()
-    self.response.headers['server-response'] ='Delete Request Sent'
-
-  def post(self,post_id):
-    key = db.Key.from_path('Post', int(post_id), parent = blog_key())
-    if key == None:
-        self.error(404)
-        return
-    post = db.get(key)
-    cookieusername  = (self.request.cookies.get('name'))
-    if cookieusername == None or post.ownerid != long(cookieusername.split('|')[0]) :
-        self.error(401)
-        return
-
-    if post == None:
-        self.error(404)
-        return
-
-    post.subject = self.request.get('subject')
-    post.content = self.request.get('content')
-    post.put()
-    update_cache_frontpage()
-    self.response.headers['server-response'] ='Update Request Sent'
-
-  def get(self,post_id):
-    ##post_id=str(self.request.url)[-16:]
-    #self.write(post_id)
-    #post_id=4642138092470272
-
-    key = db.Key.from_path('Post', int(post_id), parent = blog_key())
-    #print "this is the the str(key):::::::"+str(key)
-    post_id_key=str(post_id)
-    cache=age_get(post_id_key)
-
-    if cache[1]==0 or cache[1] > 60: #reseting the cache every 60 seconds
-      post = db.get(key)
-      age_set(post_id_key, post)
-      post = age_get(post_id_key)[0]
+      post.delete()
       update_cache_frontpage()
-    if cache[1] <= 60:
-      post=age_get(post_id_key)[0]
-    elif post==None:
-      self.error(404)
-      return
+      self.response.headers['server-response'] ='Delete Request Sent'
 
-    retrived=int(age_get(post_id_key)[1])
-    self.render('blog/permalink.html', post = post,retrived=retrived)
+    def post(self,post_id):
+      key = db.Key.from_path('Post', int(post_id), parent = blog_key())
+      if key == None:
+          self.error(404)
+          return
+      post = db.get(key)
+      cookieusername  = (self.request.cookies.get('name'))
+      if cookieusername == None or post.ownerid != long(cookieusername.split('|')[0]) :
+          self.error(401)
+          return
+
+      if post == None:
+          self.error(404)
+          return
+
+      post.subject = self.request.get('subject')
+      post.content = self.request.get('content')
+      post.put()
+      update_cache_frontpage()
+      self.response.headers['server-response'] ='Update Request Sent'
+
+    def get(self,post_id):
+      ##post_id=str(self.request.url)[-16:]
+      #self.write(post_id)
+      #post_id=4642138092470272
+
+      key = db.Key.from_path('Post', int(post_id), parent = blog_key())
+      #print "this is the the str(key):::::::"+str(key)
+      post_id_key=str(post_id)
+      cache=age_get(post_id_key)
+
+      if cache[1]==0 or cache[1] > 60: #reseting the cache every 60 seconds
+        post = db.get(key)
+        age_set(post_id_key, post)
+        post = age_get(post_id_key)[0]
+        update_cache_frontpage()
+      if cache[1] <= 60:
+        post=age_get(post_id_key)[0]
+      elif post==None:
+        self.error(404)
+        return
+
+      retrived=int(age_get(post_id_key)[1])
+      self.render('blog/permalink.html', post = post,retrived=retrived)
 
 def jsonrespond(post):
-  post._render_text = post.content.replace('\n','<br>')
-  jsondict={"content":post._render_text,
+    post._render_text = post.content.replace('\n','<br>')
+    jsondict={"content":post._render_text,
             "created":post.created.isoformat(), #post.created.strftime("%b %d, %Y"),
             "subject":post.subject,
             "postid": post.key().id(),
             "ownerid": post.ownerid,
             "last_modified": post.last_modified.isoformat()
             }
-  return jsondict
+    return jsondict
 
 
 class PostPageJson(Handler):
