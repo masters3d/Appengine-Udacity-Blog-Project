@@ -11,9 +11,11 @@
 		>CS 253 Blog
 	</a>
 	<div>
+        {% if userIsLoggedin %}
 	<a href="/blog/newpost" >
 		Add New Post
 	</a>
+        {% endif %}
 	</div>
 	<br>
 	<div>
@@ -22,11 +24,19 @@
 	</a>
 	</div>
     <br>
-    	<div>
-	<a href="/blog/signup" >
+    <div>
+         {% if userIsLoggedin %}
+	<a href="/blog/logout" >
+		Log Out
+	</a>
+        {% endif %}
+        {% if not userIsLoggedin %}
+    <a href="/blog/signup" >
 		Signup as New user
 	</a>
+        {% endif %}
 	</div>
+
 	<br>
 	<div id="content">
 	{% block content %}

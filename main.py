@@ -125,7 +125,8 @@ class BlogFront(Handler):
             posts=age_get("blogfrontpage")[0]
 
         retrived=int(age_get("blogfrontpage")[1])
-        self.render("blog/front.html",posts=posts,retrived=retrived)
+        userIsLoggedin = checkIfLoggedIn(self.request)
+        self.render("blog/front.html",posts=posts,retrived=retrived, userIsLoggedin = userIsLoggedin )
 
 
 class BlogFrontJson(Handler):
@@ -140,65 +141,69 @@ class BlogFrontJson(Handler):
       self.response.headers['Content-Type'] ='application/json; charset=UTF-8'
       self.write(json.dumps(json_posts))
 
+def checkIfLoggedIn(request):
+    cookieusername  = request.cookies.get('name')
+    if cookieusername is not None:
+        cookieStart = cookieusername.split('|')[0]
+        if cookieStart is not None and len(cookieStart) > 0 :
+            return True
+    return False
+
 
 class PostPage(Handler):
     def delete(self,post_id):
-      key = db.Key.from_path('Post', int(post_id), parent = blog_key())
-      post = b.get(key)
-      cookieusername  = (self.request.cookies.get('name'))
-      cookieStart = cookieusername.split('|')[0]
-      if cookieusername == None or post.ownerid != long(cookieStart) :
-          self.error(401)
-          return
+        key = db.Key.from_path('Post', int(post_id), parent = blog_key())
+        post = db.get(key)
+        cookieusername  = (self.request.cookies.get('name'))
+        cookieStart = cookieusername.split('|')[0]
+        if cookieusername == None or post.ownerid != long(cookieStart) :
+            self.error(401)
+            return
 
-      post.delete()
-      update_cache_frontpage()
-      self.response.headers['server-response'] ='Delete Request Sent'
+        post.delete()
+        update_cache_frontpage()
+        self.response.headers['server-response'] ='Delete Request Sent'
 
     def post(self,post_id):
-      key = db.Key.from_path('Post', int(post_id), parent = blog_key())
-      if key == None:
-          self.error(404)
-          return
-      post = db.get(key)
-      cookieusername  = (self.request.cookies.get('name'))
-      if cookieusername == None or post.ownerid != long(cookieusername.split('|')[0]) :
-          self.error(401)
-          return
+        key = db.Key.from_path('Post', int(post_id), parent = blog_key())
+        if key == None:
+            self.error(404)
+            return
+        post = db.get(key)
+        cookieusername  = (self.request.cookies.get('name'))
+        if cookieusername == None or post.ownerid != long(cookieusername.split('|')[0]) :
+            self.error(401)
+            return
 
-      if post == None:
-          self.error(404)
-          return
+        if post == None:
+            self.error(404)
+            return
 
-      post.subject = self.request.get('subject')
-      post.content = self.request.get('content')
-      post.put()
-      update_cache_frontpage()
-      self.response.headers['server-response'] ='Update Request Sent'
+        post.subject = self.request.get('subject')
+        post.content = self.request.get('content')
+        post.put()
+        update_cache_frontpage()
+        self.response.headers['server-response'] ='Update Request Sent'
 
     def get(self,post_id):
-      ##post_id=str(self.request.url)[-16:]
-      #self.write(post_id)
-      #post_id=4642138092470272
+       key = db.Key.from_path('Post', int(post_id), parent = blog_key())
+       post_id_key=str(post_id)
+       cache=age_get(post_id_key)
 
-      key = db.Key.from_path('Post', int(post_id), parent = blog_key())
-      #print "this is the the str(key):::::::"+str(key)
-      post_id_key=str(post_id)
-      cache=age_get(post_id_key)
+       if cache[1]==0 or cache[1] > 60: #reseting the cache every 60 seconds
+         post = db.get(key)
+         age_set(post_id_key, post)
+         post = age_get(post_id_key)[0]
+         update_cache_frontpage()
+       if cache[1] <= 60:
+         post=age_get(post_id_key)[0]
+       elif post==None:
+         self.error(404)
+         return
 
-      if cache[1]==0 or cache[1] > 60: #reseting the cache every 60 seconds
-        post = db.get(key)
-        age_set(post_id_key, post)
-        post = age_get(post_id_key)[0]
-        update_cache_frontpage()
-      if cache[1] <= 60:
-        post=age_get(post_id_key)[0]
-      elif post==None:
-        self.error(404)
-        return
-
-      retrived=int(age_get(post_id_key)[1])
-      self.render('blog/permalink.html', post = post,retrived=retrived)
+       retrived=int(age_get(post_id_key)[1])
+       userIsLoggedin = checkIfLoggedIn(self.request)
+       self.render('blog/permalink.html', post = post,retrived=retrived, userIsLoggedin = userIsLoggedin )
 
 def jsonrespond(post):
     post._render_text = post.content.replace('\n','<br>')
@@ -238,7 +243,6 @@ class NewPost(Handler):
         print(self.request)
         self.redirect('signup')
         return
-
     cookieusernidnumber = long(cookieusername.split('|')[0])
 
     if subject and content:
@@ -439,7 +443,6 @@ class LogoutPage(Handler):
 
     def get(self):
       self.response.headers.add_header('Set-Cookie','name=;Path=/')
-      #params = dict(user_headsup="You have been logged out")
       self.redirect('signup')
 
 
@@ -454,15 +457,12 @@ class WelcomePage(Handler):
         u=db.get(pre_u)
         userid_valid=False
         if bcrypt.hashpw(cookieusernid, u.usersalt) == cookiehash:
-                #print "It matches"
                 userid_valid=True
         else:
-                #print "It does not match"
                 userid_valid=False
 
         if userid_valid:
-          #self.render('blog/welcome.html', username = u.username)
-          self.renderwelcomepage(username = u.username)
+          self.renderwelcomepage(username = u.username, userIsLoggedin = True)
 
         else: #Need to add cookies intead to this
           self.redirect('signup')
