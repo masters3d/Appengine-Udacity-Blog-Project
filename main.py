@@ -236,6 +236,17 @@ class PostPageJson(Handler):
       return
     self.error(404)
 
+class EditPost(Handler):
+    def get(self, post_id):
+        key = db.Key.from_path('Post', int(post_id), parent = blog_key())
+        post = db.get(key)
+        if post != None:
+            self.render("blog/editpost.html", subject = post.subject, content = post.content, error = "")
+            return
+        self.error(403)
+
+
+
 class NewPost(Handler):
   def get(self):
     self.render('blog/newpost.html')
@@ -564,7 +575,7 @@ app = webapp2.WSGIApplication([('/art', ArtPage),
                                ('/blog/newpost',NewPost),
                                ('/blog/userid/([0-9]+)',UserNameId),
                                #('/blog/([0-9]+)/edit',PostPageEdit), another for delete
-                                # blog/([0-9]+) ([0-9]+)
+                               ('/blog/([0-9]+)/edit', EditPost),
                                ('/blog/([0-9]+)',PostPage),
                                ('/blog/([0-9]+).json',PostPageJson),
                                ('/blog/?',BlogFront),
