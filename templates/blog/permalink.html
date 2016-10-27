@@ -2,4 +2,17 @@
 
 {% block content %}
 	{{post.render() | safe}}
+
+
+    {% if userIsLoggedin and userIsLoggedin == post.getowneridstring() %}
+        <br>
+
+	<a href= {{ post.getid() + "/edit"}} >
+		Edit
+	</a>
+        <br><br>
+    <a href= {{ post.getid() + "/delete"}} >
+		Delete
+	</a>
+    {% endif %}
 {% endblock %}

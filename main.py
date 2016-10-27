@@ -103,6 +103,11 @@ class Post(db.Model, Handler):
         self._render_text = self.content.replace('\n','<br>')
         return self.render_str("blog/post.html",p = self)
 
+    def getid(self):
+        return str(self.key().id())
+
+    def getowneridstring(self):
+        return str(self.ownerid)
 
 def update_cache_frontpage():
     posts = greetings = Post.all().order('-created').fetch(limit = 10)
@@ -141,12 +146,13 @@ class BlogFrontJson(Handler):
       self.response.headers['Content-Type'] ='application/json; charset=UTF-8'
       self.write(json.dumps(json_posts))
 
+# this return false if there is nobody logged but if there is it returns the actual user logged in
 def checkIfLoggedIn(request):
     cookieusername  = request.cookies.get('name')
     if cookieusername is not None:
         cookieStart = cookieusername.split('|')[0]
         if cookieStart is not None and len(cookieStart) > 0 :
-            return True
+            return cookieStart
     return False
 
 
@@ -557,6 +563,8 @@ app = webapp2.WSGIApplication([('/art', ArtPage),
                                ('/art/',RedirectArtPage),
                                ('/blog/newpost',NewPost),
                                ('/blog/userid/([0-9]+)',UserNameId),
+                               #('/blog/([0-9]+)/edit',PostPageEdit), another for delete
+                                # blog/([0-9]+) ([0-9]+)
                                ('/blog/([0-9]+)',PostPage),
                                ('/blog/([0-9]+).json',PostPageJson),
                                ('/blog/?',BlogFront),
